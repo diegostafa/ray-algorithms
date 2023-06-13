@@ -42,8 +42,8 @@ struct Edge
 {
     VertexId a;
     VertexId b;
-    EdgeType type;
-    int weight = 5.0f;
+    int weight;
+    EdgeType type = EdgeType::NIL;
 };
 
 struct Graph
@@ -304,6 +304,7 @@ void drawVertex(const Vertex &v)
 {
     auto vertColor = v.visited ? BLUE : BLACK;
     DrawCircleV(v.position, v.radius, vertColor);
+    DrawRing(v.position, v.radius, v.radius + 1, 360, 0, 0, WHITE);
 }
 
 void drawEdge(const VertList &Lv, const Edge &e)
@@ -449,34 +450,38 @@ void handleSelectSourceAndDestination(VertList &Lv, VertexId &source, VertexId &
     }
 }
 
+void randomizeVertexPositions(VertList &Lv, int screen_w, int screen_h)
+{
+    for (auto &&v : Lv)
+        v.position = {
+            static_cast<float>(rand() % screen_w),
+            static_cast<float>(rand() % screen_h)};
+}
+
 int main()
 {
-    InitWindow(900, 800, "Graph Algos");
+    int screen_w = 900;
+    int screen_h = 800;
+
+    InitWindow(screen_w, screen_h, "Graph algos");
+    SetWindowState(FLAG_WINDOW_RESIZABLE);
     SetTargetFPS(60);
 
-    VertList Lv{
-        {{100, 100}, false},
-        {{300, 100}, false},
-        {{500, 100}, false},
-        {{300, 300}, false},
-        {{400, 500}, false},
-        {{500, 500}, false},
-        {{500, 300}, false}};
-
+    VertList Lv(10);
     EdgeList Le{
-        {0, 1, EdgeType::NIL, (rand() % 20) + 5},
-        {0, 2, EdgeType::NIL, (rand() % 20) + 5},
-        {1, 3, EdgeType::NIL, (rand() % 20) + 5},
-        {2, 4, EdgeType::NIL, (rand() % 20) + 5},
-        {3, 4, EdgeType::NIL, (rand() % 20) + 5},
-        {3, 5, EdgeType::NIL, (rand() % 20) + 5},
-        {4, 5, EdgeType::NIL, (rand() % 20) + 5},
-        {4, 6, EdgeType::NIL, (rand() % 20) + 5}};
+        {0, 1, (rand() % 20) + 5},
+        {0, 2, (rand() % 20) + 5},
+        {1, 3, (rand() % 20) + 5},
+        {2, 4, (rand() % 20) + 5},
+        {3, 4, (rand() % 20) + 5},
+        {3, 5, (rand() % 20) + 5},
+        {4, 5, (rand() % 20) + 5},
+        {4, 6, (rand() % 20) + 5}};
 
     Graph G{Lv, Le};
-
     VertexId source = 1;
     VertexId destination = Lv.size() - 1;
+    randomizeVertexPositions(G.V, screen_w, screen_h);
 
     while (!WindowShouldClose())
     {
@@ -485,9 +490,6 @@ int main()
         {
             handleDragVertex(G.V);
             handleSelectSourceAndDestination(G.V, source, destination);
-            highlightSourceAndDestination(G.V[source], G.V[destination]);
-
-            drawGraph(G);
 
             if (IsKeyPressed(KEY_D))
                 dfsTraversal(G, source);
@@ -504,8 +506,14 @@ int main()
             if (IsKeyPressed(KEY_J))
                 ssspHeapDijkstra(G, source);
 
+            if (IsKeyDown(KEY_R))
+                randomizeVertexPositions(G.V, screen_w, screen_h);
+
             if (IsKeyPressed(KEY_BACKSPACE))
                 resetGraph(G);
+
+            highlightSourceAndDestination(G.V[source], G.V[destination]);
+            drawGraph(G);
         }
         EndDrawing();
     }
