@@ -4,9 +4,49 @@
 #include <vector>
 #include <queue>
 #include <map>
+#include <unordered_map>
 #include <iostream>
 
 #include "raylib.h"
+
+template <typename T>
+struct UnionFind
+{
+    std::unordered_map<T, T> parent;
+    std::unordered_map<T, int> dist;
+
+    void init(const std::vector<T> &vec)
+    {
+        for (auto &&v : vec)
+        {
+            parent[v] = v;
+            dist[v] = 1;
+        }
+    }
+
+    T find(const T &val)
+    {
+        if (parent[val] == val)
+            return val;
+
+        return find(parent[val]);
+    }
+
+    void unify(const T &a, const T &b)
+    {
+        T x = find(a);
+        T y = find(b);
+
+        if (x == y)
+            return;
+
+        if (dist[x] <= dist[y])
+            std::swap(x, y);
+
+        parent[y] = x;
+        dist[x] += dist[y];
+    }
+};
 
 enum EdgeType
 {
@@ -41,12 +81,6 @@ struct Graph
 {
     VertList V;
     EdgeList E;
-};
-
-struct SSSP
-{
-    VertexId start;
-    VertexId end;
 };
 
 void highlightSourceAndDestination(const Vertex &source, const Vertex &destination)
@@ -259,9 +293,32 @@ void mstHeapPrim(Graph &G, VertexId source)
                     e.type = EdgeType::TREE;
 }
 
-void mstUnionFindKruskal(Graph &G, VertexId source)
+void mstUnionFindKruskal(Graph &G)
 {
-    // TODO
+    std::vector<Vertex> &Lv = G.V;
+    std::vector<Edge> &Le = G.E;
+
+    std::vector<VertexId> vids(Lv.size());
+    for (unsigned int i = 0; i < Lv.size(); i++)
+        vids.push_back(i);
+
+    UnionFind<VertexId> uf;
+    uf.init(vids);
+
+    std::sort(
+        G.E.begin(),
+        G.E.end(),
+        [](auto e1, auto e2)
+        { return e1.weight <= e2.weight; });
+
+    for (auto &&e : G.E)
+    {
+        if (uf.find(e.a) != uf.find(e.b))
+        {
+            e.type = EdgeType::TREE;
+            uf.unify(e.a, e.b);
+        }
+    }
 }
 
 VertexId vertexAtCoord(const VertList &Lv, const Vector2 &mousePos)
@@ -350,7 +407,7 @@ int main()
                 mstHeapPrim(G, source);
 
             if (IsKeyPressed(KEY_K))
-                mstUnionFindKruskal(G, source);
+                mstUnionFindKruskal(G);
 
             if (IsKeyPressed(KEY_BACKSPACE))
                 resetGraph(G);
