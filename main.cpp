@@ -11,7 +11,7 @@
 
 // --- data structures
 
-enum EdgeType;
+#define INF __INT_MAX__
 
 struct Vertex;
 struct Edge;
@@ -35,6 +35,7 @@ struct Vertex
     Vector2 position;
     bool visited;
     float radius = 40;
+    int reachCost = INF;
 };
 
 struct Edge
@@ -95,7 +96,10 @@ struct UnionFind
 void resetGraph(Graph &G)
 {
     for (auto &&v : G.V)
+    {
         v.visited = false;
+        v.reachCost = INF;
+    }
 
     for (auto &&e : G.E)
         e.type = EdgeType::NIL;
@@ -183,18 +187,21 @@ void mstHeapPrim(Graph &G, VertexId source)
     std::map<VertexId, VertexId> parents{};
     std::vector<VertexId> heap;
 
-    for (unsigned int i = 0; i < G.V.size(); i++)
+    for (unsigned int i = 0; i < Lv.size(); i++)
     {
-        costs[i] = __INT_MAX__;
         parents[i] = -1;
         heap.push_back(i);
     }
-    costs[source] = 0;
+
+    Lv[source].reachCost = 0;
 
     while (!heap.empty())
     {
-        std::sort(heap.begin(), heap.end(), [&costs](auto a, auto b)
-                  { return costs[a] >= costs[b]; });
+        std::sort(
+            heap.begin(),
+            heap.end(),
+            [&Lv](auto a, auto b)
+            { return Lv[a].reachCost >= Lv[b].reachCost; });
 
         auto min = heap.back();
         heap.pop_back();
@@ -204,10 +211,9 @@ void mstHeapPrim(Graph &G, VertexId source)
             if (isIncident(e, min))
             {
                 auto opposite = e.a == min ? e.b : e.a;
-                if (std::find(heap.begin(), heap.end(), opposite) != heap.end() &&
-                    e.weight < costs[opposite])
+                if (std::find(heap.begin(), heap.end(), opposite) != heap.end())
                 {
-                    costs[opposite] = e.weight;
+                    Lv[opposite].reachCost = std::min(e.weight, Lv[opposite].reachCost);
                     parents[opposite] = min;
                 }
             }
@@ -251,7 +257,42 @@ void mstUnionFindKruskal(Graph &G)
 
 // --- sssp - single source shortest path
 
-void ssspHeapDijkstra(Graph &G, VertexId source) {}
+void ssspHeapDijkstra(Graph &G, VertexId source)
+{
+    std::vector<Vertex> &Lv = G.V;
+    std::vector<Edge> &Le = G.E;
+    std::map<VertexId, int> costs{};
+    std::vector<VertexId> heap;
+
+    for (unsigned int i = 0; i < Lv.size(); i++)
+        heap.push_back(i);
+
+    Lv[source].reachCost = 0;
+
+    while (!heap.empty())
+    {
+        std::sort(
+            heap.begin(),
+            heap.end(),
+            [&Lv](auto a, auto b)
+            { return Lv[a].reachCost >= Lv[b].reachCost; });
+
+        auto min = heap.back();
+        heap.pop_back();
+
+        Lv[min].visited = true;
+
+        for (auto &&e : Le)
+        {
+            if (isIncident(e, min))
+            {
+                auto opposite = e.a == min ? e.b : e.a;
+                if (Lv[opposite].visited == false)
+                    Lv[opposite].reachCost = std::min(Lv[opposite].reachCost, e.weight + Lv[min].reachCost);
+            }
+        }
+    }
+}
 
 void ssspDPBellmanFord(Graph &G, VertexId source) {}
 
@@ -316,6 +357,17 @@ void drawVertexNames(const Vertex &v, int vid)
         fontSize, WHITE);
 }
 
+void drawVertexReachCosts(const Vertex &v)
+{
+    float fontSize = 15;
+    auto vertName = v.reachCost == INF ? "INF" : std::to_string(v.reachCost);
+    DrawText(
+        vertName.c_str(),
+        v.position.x + fontSize,
+        v.position.y + fontSize,
+        fontSize, RED);
+}
+
 void drawGraph(const Graph &G)
 {
     for (auto &&e : G.E)
@@ -328,6 +380,7 @@ void drawGraph(const Graph &G)
     {
         drawVertex(G.V[i]);
         drawVertexNames(G.V[i], i);
+        drawVertexReachCosts(G.V[i]);
     }
 }
 
@@ -416,9 +469,9 @@ int main()
         {
             handleDragVertex(G.V);
             handleSelectSourceAndDestination(G.V, source, destination);
+            highlightSourceAndDestination(G.V[source], G.V[destination]);
 
             drawGraph(G);
-            highlightSourceAndDestination(G.V[source], G.V[destination]);
 
             if (IsKeyPressed(KEY_D))
                 dfsTraversal(G, source);
@@ -431,6 +484,9 @@ int main()
 
             if (IsKeyPressed(KEY_K))
                 mstUnionFindKruskal(G);
+
+            if (IsKeyPressed(KEY_J))
+                ssspHeapDijkstra(G, source);
 
             if (IsKeyPressed(KEY_BACKSPACE))
                 resetGraph(G);
