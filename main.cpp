@@ -349,22 +349,38 @@ void drawEdgeWeights(const VertList &Lv, const Edge &e)
 void drawVertexNames(const Vertex &v, int vid)
 {
     float fontSize = 20;
-    auto vertName = std::to_string(vid);
+    auto vertName = "id: " + std::to_string(vid);
     DrawText(
         vertName.c_str(),
-        v.position.x - fontSize / 2,
+        v.position.x - fontSize,
         v.position.y - fontSize / 2,
         fontSize, WHITE);
 }
 
 void drawVertexReachCosts(const Vertex &v)
 {
-    float fontSize = 15;
-    auto vertName = v.reachCost == INF ? "INF" : std::to_string(v.reachCost);
-    DrawText(
-        vertName.c_str(),
+    float fontSize = 16;
+    float labelSize = 50;
+    auto vertReachCost = v.reachCost == INF ? "INF" : std::to_string(v.reachCost);
+
+    DrawRectangle(
         v.position.x + fontSize,
         v.position.y + fontSize,
+        labelSize,
+        labelSize,
+        BLACK);
+
+    DrawRectangleLines(
+        v.position.x + fontSize,
+        v.position.y + fontSize,
+        labelSize,
+        labelSize,
+        WHITE);
+
+    DrawText(
+        vertReachCost.c_str(),
+        v.position.x + fontSize * 2,
+        v.position.y + fontSize * 2,
         fontSize, RED);
 }
 
@@ -435,7 +451,7 @@ void handleSelectSourceAndDestination(VertList &Lv, VertexId &source, VertexId &
 
 int main()
 {
-    InitWindow(800, 600, "Graph Algos");
+    InitWindow(900, 800, "Graph Algos");
     SetTargetFPS(60);
 
     VertList Lv{
