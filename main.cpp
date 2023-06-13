@@ -9,6 +9,48 @@
 
 #include "raylib.h"
 
+// --- data structures
+
+enum EdgeType;
+
+struct Vertex;
+struct Edge;
+struct Graph;
+
+typedef int VertexId;
+typedef std::vector<Vertex> VertList;
+typedef std::vector<Edge> EdgeList;
+
+enum EdgeType
+{
+    NIL,   // generic edge
+    DISC,  // edge which connects to an unvisited node
+    BACK,  // edge which connects to a visited node (DFS)
+    CROSS, // edge which connects to a visited node (BFS)
+    TREE   // edge which is part of the MST
+};
+
+struct Vertex
+{
+    Vector2 position;
+    bool visited;
+    float radius = 40;
+};
+
+struct Edge
+{
+    VertexId a;
+    VertexId b;
+    EdgeType type;
+    int weight = 5.0f;
+};
+
+struct Graph
+{
+    VertList V;
+    EdgeList E;
+};
+
 template <typename T>
 struct UnionFind
 {
@@ -48,125 +90,7 @@ struct UnionFind
     }
 };
 
-enum EdgeType
-{
-    NIL,   // generic edge
-    DISC,  // edge which connects to an unvisited node
-    BACK,  // edge which connects to a visited node (DFS)
-    CROSS, // edge which connects to a visited node (BFS)
-    TREE   // edge which is part of the MST
-};
-
-struct Vertex
-{
-    Vector2 position;
-    bool visited;
-    float radius = 40;
-};
-
-typedef int VertexId;
-
-struct Edge
-{
-    VertexId a;
-    VertexId b;
-    EdgeType type;
-    int weight = 5.0f;
-};
-
-typedef std::vector<Vertex> VertList;
-typedef std::vector<Edge> EdgeList;
-
-struct Graph
-{
-    VertList V;
-    EdgeList E;
-};
-
-void highlightSourceAndDestination(const Vertex &source, const Vertex &destination)
-{
-    if (&source == &destination)
-    {
-        DrawRing(source.position, source.radius, source.radius + 10, -180, 0, 0, YELLOW);
-        DrawRing(source.position, source.radius, source.radius + 10, +180, 0, 0, BROWN);
-        return;
-    }
-
-    DrawRing(source.position, source.radius, source.radius + 10, 360, 0, 0, YELLOW);
-    DrawRing(destination.position, destination.radius, destination.radius + 10, 360, 0, 0, BROWN);
-}
-
-void drawVertex(const Vertex &v)
-{
-    auto vertColor = v.visited ? BLUE : BLACK;
-    DrawCircleV(v.position, v.radius, vertColor);
-}
-
-void drawEdge(const VertList &Lv, const Edge &e)
-{
-    auto edgeColor = BLACK;
-    switch (e.type)
-    {
-    case EdgeType::NIL:
-        edgeColor = BLACK;
-        break;
-    case EdgeType::DISC:
-        edgeColor = GREEN;
-        break;
-    case EdgeType::BACK:
-        edgeColor = RED;
-        break;
-    case EdgeType::CROSS:
-        edgeColor = RED;
-        break;
-    case EdgeType::TREE:
-        edgeColor = GREEN;
-        break;
-    }
-
-    DrawLineEx(Lv[e.a].position, Lv[e.b].position, e.weight, edgeColor);
-}
-
-void drawEdgeWeights(const VertList &Lv, const Edge &e)
-{
-    float fontSize = 20;
-    auto edgeWeight = std::to_string(e.weight);
-    auto weightPosX = ((Lv[e.a].position.x + Lv[e.b].position.x) / 2);
-    auto weightPosY = ((Lv[e.a].position.y + Lv[e.b].position.y) / 2);
-
-    DrawRectangle(weightPosX, weightPosY, fontSize * 2, fontSize * 2, BLACK);
-    DrawText(
-        edgeWeight.c_str(),
-        weightPosX + fontSize / 2,
-        weightPosY + fontSize / 2,
-        fontSize, WHITE);
-}
-
-void drawVertexNames(const Vertex &v, int vid)
-{
-    float fontSize = 20;
-    auto vertName = std::to_string(vid);
-    DrawText(
-        vertName.c_str(),
-        v.position.x - fontSize / 2,
-        v.position.y - fontSize / 2,
-        fontSize, WHITE);
-}
-
-void drawGraph(const Graph &G)
-{
-    for (auto &&e : G.E)
-    {
-        drawEdge(G.V, e);
-        drawEdgeWeights(G.V, e);
-    }
-
-    for (unsigned int i = 0; i < G.V.size(); i++)
-    {
-        drawVertex(G.V[i]);
-        drawVertexNames(G.V[i], i);
-    }
-}
+// --- utils
 
 void resetGraph(Graph &G)
 {
@@ -188,6 +112,8 @@ bool isIncident(const Edge &e, const VertexId &vid)
 {
     return e.a == vid || e.b == vid;
 }
+
+// --- graph traversal
 
 void dfsTraversal(Graph &G, VertexId source)
 {
@@ -245,6 +171,8 @@ void bfsTraversal(Graph &G, VertexId source)
         i++;
     }
 }
+
+// --- mst - minimum spanning tree
 
 void mstHeapPrim(Graph &G, VertexId source)
 {
@@ -319,6 +247,101 @@ void mstUnionFindKruskal(Graph &G)
             uf.unify(e.a, e.b);
         }
     }
+}
+
+// --- sssp - single source shortest path
+
+void ssspHeapDijkstra(Graph &G, VertexId source) {}
+
+void ssspDPBellmanFord(Graph &G, VertexId source) {}
+
+void ssspDPFloydWarshall(Graph &G, VertexId source) {}
+
+// --- visualization
+
+void drawVertex(const Vertex &v)
+{
+    auto vertColor = v.visited ? BLUE : BLACK;
+    DrawCircleV(v.position, v.radius, vertColor);
+}
+
+void drawEdge(const VertList &Lv, const Edge &e)
+{
+    auto edgeColor = BLACK;
+    switch (e.type)
+    {
+    case EdgeType::NIL:
+        edgeColor = BLACK;
+        break;
+    case EdgeType::DISC:
+        edgeColor = GREEN;
+        break;
+    case EdgeType::BACK:
+        edgeColor = RED;
+        break;
+    case EdgeType::CROSS:
+        edgeColor = RED;
+        break;
+    case EdgeType::TREE:
+        edgeColor = GREEN;
+        break;
+    }
+
+    DrawLineEx(Lv[e.a].position, Lv[e.b].position, e.weight, edgeColor);
+}
+
+void drawEdgeWeights(const VertList &Lv, const Edge &e)
+{
+    float fontSize = 20;
+    auto edgeWeight = std::to_string(e.weight);
+    auto weightPosX = ((Lv[e.a].position.x + Lv[e.b].position.x) / 2);
+    auto weightPosY = ((Lv[e.a].position.y + Lv[e.b].position.y) / 2);
+
+    DrawRectangle(weightPosX, weightPosY, fontSize * 2, fontSize * 2, BLACK);
+    DrawText(
+        edgeWeight.c_str(),
+        weightPosX + fontSize / 2,
+        weightPosY + fontSize / 2,
+        fontSize, WHITE);
+}
+
+void drawVertexNames(const Vertex &v, int vid)
+{
+    float fontSize = 20;
+    auto vertName = std::to_string(vid);
+    DrawText(
+        vertName.c_str(),
+        v.position.x - fontSize / 2,
+        v.position.y - fontSize / 2,
+        fontSize, WHITE);
+}
+
+void drawGraph(const Graph &G)
+{
+    for (auto &&e : G.E)
+    {
+        drawEdge(G.V, e);
+        drawEdgeWeights(G.V, e);
+    }
+
+    for (unsigned int i = 0; i < G.V.size(); i++)
+    {
+        drawVertex(G.V[i]);
+        drawVertexNames(G.V[i], i);
+    }
+}
+
+void highlightSourceAndDestination(const Vertex &source, const Vertex &destination)
+{
+    if (&source == &destination)
+    {
+        DrawRing(source.position, source.radius, source.radius + 10, -180, 0, 0, YELLOW);
+        DrawRing(source.position, source.radius, source.radius + 10, +180, 0, 0, BROWN);
+        return;
+    }
+
+    DrawRing(source.position, source.radius, source.radius + 10, 360, 0, 0, YELLOW);
+    DrawRing(destination.position, destination.radius, destination.radius + 10, 360, 0, 0, BROWN);
 }
 
 VertexId vertexAtCoord(const VertList &Lv, const Vector2 &mousePos)
