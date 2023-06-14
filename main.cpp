@@ -153,15 +153,14 @@ void bfsTraversal(Graph &G, VertexId source)
 {
     VertList &Lv = G.V;
     EdgeList &Le = G.E;
-    Lv[source].visited = true;
-
-    std::vector<std::vector<VertexId>> layers{{source}};
     unsigned int i = 0;
 
-    while (!layers[i].empty())
-    {
-        layers.push_back({});
+    std::vector<std::vector<VertexId>> layers(Lv.size());
+    layers.front().push_back(source);
+    Lv[source].visited = true;
 
+    for (unsigned int i = 0; !layers[i].empty(); i++)
+    {
         for (auto &&v : layers[i])
         {
             for (auto &&e : Le)
@@ -180,7 +179,6 @@ void bfsTraversal(Graph &G, VertexId source)
                 }
             }
         }
-        i++;
     }
 }
 
