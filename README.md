@@ -1,8 +1,8 @@
 Visualizing graph algorithms with raylib
 
 currently implemented algorithms:
-* dfs traversal
-* bfs traversal
+* traversal - dfs
+* traversal - bfs
 * mst - heap prim
 * mst - unionfind kruskal
 * sssp - heap dijkstra
