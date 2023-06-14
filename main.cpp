@@ -11,7 +11,7 @@
 
 // --- data structures
 
-#define INF __INT_MAX__
+#define INF 1000
 
 struct Vertex;
 struct Edge;
@@ -21,14 +21,7 @@ typedef int VertexId;
 typedef std::vector<Vertex> VertList;
 typedef std::vector<Edge> EdgeList;
 
-enum EdgeType
-{
-    NIL,   // generic edge
-    DISC,  // edge which connects to an unvisited node
-    BACK,  // edge which connects to a visited node (DFS)
-    CROSS, // edge which connects to a visited node (BFS)
-    TREE   // edge which is part of the MST
-};
+std::string G_log;
 
 struct Vertex
 {
@@ -40,16 +33,26 @@ struct Vertex
 
 struct Edge
 {
+    enum Type
+    {
+        NIL,   // generic edge
+        DISC,  // edge which connects to an unvisited node
+        BACK,  // edge which connects to a visited node (DFS)
+        CROSS, // edge which connects to a visited node (BFS)
+        TREE   // edge which is part of the MST
+    };
+
     VertexId a;
     VertexId b;
     int weight;
-    EdgeType type = EdgeType::NIL;
+    Type type = Type::NIL;
 };
 
 struct Graph
 {
     VertList V;
     EdgeList E;
+    bool isDirected = false; // if true, edges are to be interpreted as (a -> b)
 };
 
 template <typename T>
@@ -102,7 +105,7 @@ void resetGraph(Graph &G)
     }
 
     for (auto &&e : G.E)
-        e.type = EdgeType::NIL;
+        e.type = Edge::Type::NIL;
 }
 
 float distance(const Vector2 &a, const Vector2 &b)
@@ -110,6 +113,11 @@ float distance(const Vector2 &a, const Vector2 &b)
     float xDiff = a.x - b.x;
     float yDiff = a.y - b.y;
     return std::sqrt((xDiff * xDiff) + (yDiff * yDiff));
+}
+
+Vector2 middlePoint(const Vector2 &v1, const Vector2 &v2)
+{
+    return {(v1.x + v2.x) / 2, (v1.y + v2.y) / 2};
 }
 
 bool isIncident(const Edge &e, const VertexId &vid)
@@ -127,14 +135,14 @@ void dfsTraversal(Graph &G, VertexId source)
 
     for (auto &&e : Le)
     {
-        if (e.type == EdgeType::NIL && isIncident(e, source))
+        if (e.type == Edge::Type::NIL && isIncident(e, source))
         {
             auto opposite = e.a == source ? e.b : e.a;
             if (Lv[opposite].visited)
-                e.type = EdgeType::BACK;
+                e.type = Edge::Type::BACK;
             else
             {
-                e.type = EdgeType::DISC;
+                e.type = Edge::Type::DISC;
                 dfsTraversal(G, opposite);
             }
         };
@@ -158,14 +166,14 @@ void bfsTraversal(Graph &G, VertexId source)
         {
             for (auto &&e : Le)
             {
-                if (e.type == EdgeType::NIL && isIncident(e, v))
+                if (e.type == Edge::Type::NIL && isIncident(e, v))
                 {
-                    auto opposite = e.a == v ? e.b : e.a;
+                    const auto opposite = e.a == v ? e.b : e.a;
                     if (Lv[opposite].visited)
-                        e.type = EdgeType::CROSS;
+                        e.type = Edge::Type::CROSS;
                     else
                     {
-                        e.type = EdgeType::DISC;
+                        e.type = Edge::Type::DISC;
                         Lv[opposite].visited = true;
                         layers[i + 1].push_back(opposite);
                     }
@@ -183,8 +191,7 @@ void mstHeapPrim(Graph &G, VertexId source)
     std::vector<Vertex> &Lv = G.V;
     std::vector<Edge> &Le = G.E;
 
-    std::map<VertexId, int> costs{};
-    std::map<VertexId, VertexId> parents{};
+    std::map<VertexId, VertexId> parents;
     std::vector<VertexId> heap;
 
     for (unsigned int i = 0; i < Lv.size(); i++)
@@ -203,14 +210,14 @@ void mstHeapPrim(Graph &G, VertexId source)
             [&Lv](auto a, auto b)
             { return Lv[a].reachCost >= Lv[b].reachCost; });
 
-        auto min = heap.back();
+        const auto min = heap.back();
         heap.pop_back();
 
         for (auto &&e : Le)
         {
             if (isIncident(e, min))
             {
-                auto opposite = e.a == min ? e.b : e.a;
+                const auto opposite = e.a == min ? e.b : e.a;
                 if (std::find(heap.begin(), heap.end(), opposite) != heap.end())
                 {
                     Lv[opposite].reachCost = std::min(e.weight, Lv[opposite].reachCost);
@@ -224,7 +231,7 @@ void mstHeapPrim(Graph &G, VertexId source)
         if (v.second != -1)
             for (auto &&e : Le)
                 if ((e.a == v.first && e.b == v.second) || (e.a == v.second && e.b == v.first))
-                    e.type = EdgeType::TREE;
+                    e.type = Edge::Type::TREE;
 }
 
 void mstUnionFindKruskal(Graph &G)
@@ -249,7 +256,7 @@ void mstUnionFindKruskal(Graph &G)
     {
         if (uf.find(e.a) != uf.find(e.b))
         {
-            e.type = EdgeType::TREE;
+            e.type = Edge::Type::TREE;
             uf.unify(e.a, e.b);
         }
     }
@@ -261,7 +268,6 @@ void ssspHeapDijkstra(Graph &G, VertexId source)
 {
     std::vector<Vertex> &Lv = G.V;
     std::vector<Edge> &Le = G.E;
-    std::map<VertexId, int> costs{};
     std::vector<VertexId> heap;
 
     for (unsigned int i = 0; i < Lv.size(); i++)
@@ -277,80 +283,123 @@ void ssspHeapDijkstra(Graph &G, VertexId source)
             [&Lv](auto a, auto b)
             { return Lv[a].reachCost >= Lv[b].reachCost; });
 
-        auto min = heap.back();
+        const auto min = heap.back();
         heap.pop_back();
-
-        Lv[min].visited = true;
 
         for (auto &&e : Le)
         {
             if (isIncident(e, min))
             {
-                auto opposite = e.a == min ? e.b : e.a;
-                if (Lv[opposite].visited == false)
-                    Lv[opposite].reachCost = std::min(Lv[opposite].reachCost, e.weight + Lv[min].reachCost);
+                const auto opposite = e.a == min ? e.b : e.a;
+                Lv[opposite].reachCost = std::min(Lv[opposite].reachCost, e.weight + Lv[min].reachCost);
             }
         }
     }
 }
 
-void ssspDPBellmanFord(Graph &G, VertexId source) {}
+void ssspBellmanFord(Graph &G, VertexId source)
+{
+    if (!G.isDirected)
+    {
+        G_log = "ssspBellmanFord: undirected graphs are not supported";
+        return;
+    }
 
-void ssspDPFloydWarshall(Graph &G, VertexId source) {}
+    std::vector<Vertex> &Lv = G.V;
+    std::vector<Edge> &Le = G.E;
+    bool cycle = false;
+    Lv[source].reachCost = 0;
+
+    for (unsigned int i = 0; i < Lv.size() - 1; i++)
+        for (auto &&e : Le)
+            if (Lv[e.a].reachCost != INF)
+                Lv[e.b].reachCost = std::min(Lv[e.b].reachCost, Lv[e.a].reachCost + e.weight);
+
+    for (auto &&e : Le)
+        if (Lv[e.a].reachCost != INF && Lv[e.b].reachCost > Lv[e.a].reachCost + e.weight)
+        {
+            G_log = "ssspBellmanFord: a negative cycle was found";
+            break;
+        }
+}
+
+void ssspDpBellmanFord(Graph &G, VertexId source)
+{
+    std::vector<Vertex> &Lv = G.V;
+    std::vector<Edge> &Le = G.E;
+}
+
+void ssspDpFloydWarshall(Graph &G, VertexId source) {}
 
 // --- visualization
 
+void drawLog()
+{
+    DrawText(G_log.c_str(), 10, 10, 25, DARKPURPLE);
+}
+
 void drawVertex(const Vertex &v)
 {
-    auto vertColor = v.visited ? BLUE : BLACK;
+    const auto vertColor = v.visited ? BLUE : BLACK;
     DrawCircleV(v.position, v.radius, vertColor);
     DrawRing(v.position, v.radius, v.radius + 1, 360, 0, 0, WHITE);
 }
 
-void drawEdge(const VertList &Lv, const Edge &e)
+void drawEdge(const VertList &Lv, const Edge &e, bool isDirected)
 {
     auto edgeColor = BLACK;
     switch (e.type)
     {
-    case EdgeType::NIL:
+    case Edge::Type::NIL:
         edgeColor = BLACK;
         break;
-    case EdgeType::DISC:
+    case Edge::Type::DISC:
         edgeColor = GREEN;
         break;
-    case EdgeType::BACK:
+    case Edge::Type::BACK:
         edgeColor = RED;
         break;
-    case EdgeType::CROSS:
+    case Edge::Type::CROSS:
         edgeColor = RED;
         break;
-    case EdgeType::TREE:
+    case Edge::Type::TREE:
         edgeColor = GREEN;
         break;
     }
+    DrawLineEx(
+        Lv[e.a].position,
+        Lv[e.b].position,
+        std::abs(e.weight),
+        edgeColor);
 
-    DrawLineEx(Lv[e.a].position, Lv[e.b].position, e.weight, edgeColor);
+    if (isDirected)
+    {
+        DrawLineEx(
+            middlePoint(middlePoint(Lv[e.a].position, Lv[e.b].position), Lv[e.b].position),
+            Lv[e.b].position,
+            std::abs(e.weight) * 2,
+            RED);
+    }
 }
 
 void drawEdgeWeights(const VertList &Lv, const Edge &e)
 {
-    float fontSize = 20;
-    auto edgeWeight = std::to_string(e.weight);
-    auto weightPosX = ((Lv[e.a].position.x + Lv[e.b].position.x) / 2);
-    auto weightPosY = ((Lv[e.a].position.y + Lv[e.b].position.y) / 2);
+    const auto fontSize = 20.0f;
+    const auto edgeWeight = std::to_string(e.weight);
+    const auto weightPos = middlePoint(Lv[e.a].position, Lv[e.b].position);
 
-    DrawRectangle(weightPosX, weightPosY, fontSize * 2, fontSize * 2, BLACK);
+    DrawRectangle(weightPos.x, weightPos.y, fontSize * 2, fontSize * 2, BLACK);
     DrawText(
         edgeWeight.c_str(),
-        weightPosX + fontSize / 2,
-        weightPosY + fontSize / 2,
+        weightPos.x + fontSize / 2,
+        weightPos.y + fontSize / 2,
         fontSize, WHITE);
 }
 
 void drawVertexNames(const Vertex &v, int vid)
 {
-    float fontSize = 20;
-    auto vertName = "id: " + std::to_string(vid);
+    const auto fontSize = 20;
+    const auto vertName = "id: " + std::to_string(vid);
     DrawText(
         vertName.c_str(),
         v.position.x - fontSize,
@@ -360,9 +409,9 @@ void drawVertexNames(const Vertex &v, int vid)
 
 void drawVertexReachCosts(const Vertex &v)
 {
-    float fontSize = 16;
-    float labelSize = 50;
-    auto vertReachCost = v.reachCost == INF ? "INF" : std::to_string(v.reachCost);
+    const auto fontSize = 16.0f;
+    const auto labelSize = 50.0f;
+    const std::string vertReachCost = v.reachCost == INF ? "INF" : std::to_string(v.reachCost);
 
     DrawRectangle(
         v.position.x + fontSize,
@@ -389,7 +438,7 @@ void drawGraph(const Graph &G)
 {
     for (auto &&e : G.E)
     {
-        drawEdge(G.V, e);
+        drawEdge(G.V, e, G.isDirected);
         drawEdgeWeights(G.V, e);
     }
 
@@ -426,8 +475,8 @@ void handleDragVertex(VertList &Lv)
 {
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
     {
-        auto mousePos = GetMousePosition();
-        auto selectedVert = vertexAtCoord(Lv, mousePos);
+        const auto mousePos = GetMousePosition();
+        const auto selectedVert = vertexAtCoord(Lv, mousePos);
         if (selectedVert == -1)
             return;
 
@@ -439,7 +488,7 @@ void handleSelectSourceAndDestination(VertList &Lv, VertexId &source, VertexId &
 {
     if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
     {
-        auto selectedVert = vertexAtCoord(Lv, GetMousePosition());
+        const auto selectedVert = vertexAtCoord(Lv, GetMousePosition());
         if (selectedVert == -1)
             return;
 
@@ -467,20 +516,20 @@ int main()
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     SetTargetFPS(60);
 
-    VertList Lv(10);
+    VertList Lv(7);
     EdgeList Le{
-        {0, 1, (rand() % 20) + 5},
-        {0, 2, (rand() % 20) + 5},
-        {1, 3, (rand() % 20) + 5},
-        {2, 4, (rand() % 20) + 5},
-        {3, 4, (rand() % 20) + 5},
-        {3, 5, (rand() % 20) + 5},
-        {4, 5, (rand() % 20) + 5},
-        {4, 6, (rand() % 20) + 5}};
+        {0, 1, 2},
+        {0, 2, -1},
+        {1, 3, 2},
+        {2, 4, -3},
+        {3, 4, 1},
+        {3, 5, 5},
+        {4, 5, 20},
+        {4, 6, -2}};
 
     Graph G{Lv, Le};
-    VertexId source = 1;
-    VertexId destination = Lv.size() - 1;
+    VertexId source = rand() % Lv.size();
+    VertexId destination = rand() % Lv.size();
     randomizeVertexPositions(G.V, screen_w, screen_h);
 
     while (!WindowShouldClose())
@@ -490,6 +539,9 @@ int main()
         {
             handleDragVertex(G.V);
             handleSelectSourceAndDestination(G.V, source, destination);
+
+            if (IsKeyPressed(KEY_ENTER))
+                G.isDirected = !G.isDirected;
 
             if (IsKeyPressed(KEY_D))
                 dfsTraversal(G, source);
@@ -506,14 +558,21 @@ int main()
             if (IsKeyPressed(KEY_J))
                 ssspHeapDijkstra(G, source);
 
-            if (IsKeyDown(KEY_R))
+            if (IsKeyPressed(KEY_F))
+                ssspBellmanFord(G, source);
+
+            if (IsKeyPressed(KEY_R))
                 randomizeVertexPositions(G.V, screen_w, screen_h);
 
             if (IsKeyPressed(KEY_BACKSPACE))
+            {
                 resetGraph(G);
+                G_log = "";
+            }
 
             highlightSourceAndDestination(G.V[source], G.V[destination]);
             drawGraph(G);
+            drawLog();
         }
         EndDrawing();
     }

@@ -6,5 +6,6 @@ currently implemented algorithms:
 * mst - heap prim
 * mst - unionfind kruskal
 * sssp - heap dijkstra
+* sssp - bellman-ford
 
 ![demo](./demo.gif)
