@@ -348,7 +348,7 @@ void apspDpFloydWarshall(Graph &G)
     for (unsigned int i = 0; i < Lv.size(); i++)
         for (unsigned int a = 0; a < Lv.size(); a++)
             for (unsigned int b = 0; b < Lv.size(); b++)
-                costs[a][i] = std::min(costs[a][i], costs[a][i] + costs[i][b]);
+                costs[a][b] = std::min(costs[a][b], costs[a][i] + costs[i][b]);
 
     for (unsigned int i = 0; i < Lv.size(); i++)
         if (costs[i][i])
@@ -357,9 +357,13 @@ void apspDpFloydWarshall(Graph &G)
             break;
         }
 
+    // debug
     for (unsigned int i = 0; i < Lv.size(); i++)
+    {
         for (unsigned int j = 0; j < Lv.size(); j++)
-            std::cout << costs[i][j] << "\n";
+            std::cout << costs[i][j] << " - ";
+        std::cout << "\n";
+    }
 }
 
 // --- visualization
