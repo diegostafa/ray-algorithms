@@ -323,13 +323,44 @@ void ssspBellmanFord(Graph &G, VertexId source)
         }
 }
 
-void ssspDpBellmanFord(Graph &G, VertexId source)
+// --- apsp - all pairs shortest path
+
+void apspDpBellmanFord(Graph &G, VertexId source)
+{
+}
+
+void apspDpFloydWarshall(Graph &G)
 {
     std::vector<Vertex> &Lv = G.V;
     std::vector<Edge> &Le = G.E;
-}
 
-void ssspDpFloydWarshall(Graph &G, VertexId source) {}
+    int costs[Lv.size()][Lv.size()];
+    for (unsigned int i = 0; i < Lv.size(); i++)
+        for (unsigned int j = 0; j < Lv.size(); j++)
+            costs[i][j] = INF;
+
+    for (unsigned int i = 0; i < Lv.size(); i++)
+        costs[i][i] = 0;
+
+    for (auto &&e : Le)
+        costs[e.a][e.b] = e.weight;
+
+    for (unsigned int i = 0; i < Lv.size(); i++)
+        for (unsigned int a = 0; a < Lv.size(); a++)
+            for (unsigned int b = 0; b < Lv.size(); b++)
+                costs[a][i] = std::min(costs[a][i], costs[a][i] + costs[i][b]);
+
+    for (unsigned int i = 0; i < Lv.size(); i++)
+        if (costs[i][i])
+        {
+            G_log = "apspDpFloydWarshall: a negative cycle was found";
+            break;
+        }
+
+    for (unsigned int i = 0; i < Lv.size(); i++)
+        for (unsigned int j = 0; j < Lv.size(); j++)
+            std::cout << costs[i][j] << "\n";
+}
 
 // --- visualization
 
@@ -560,6 +591,9 @@ int main()
 
             if (IsKeyPressed(KEY_F))
                 ssspBellmanFord(G, source);
+
+            if (IsKeyPressed(KEY_W))
+                apspDpFloydWarshall(G);
 
             if (IsKeyPressed(KEY_R))
                 randomizeVertexPositions(G.V, screen_w, screen_h);
