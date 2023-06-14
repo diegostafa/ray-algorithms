@@ -7,5 +7,6 @@ currently implemented algorithms:
 * mst - unionfind kruskal
 * sssp - heap dijkstra
 * sssp - bellman-ford
+* apsp - dp floyd-warshall
 
 ![demo](./demo.gif)
