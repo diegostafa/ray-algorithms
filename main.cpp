@@ -125,6 +125,12 @@ bool isIncident(const Edge &e, const VertexId &vid)
     return e.a == vid || e.b == vid;
 }
 
+template <typename T>
+bool contains(std::vector<T> &vec, const T &val)
+{
+    return std::find(vec.begin(), vec.end(), val) != vec.end();
+}
+
 // --- graph traversal
 
 void dfsTraversal(Graph &G, VertexId source)
@@ -216,7 +222,7 @@ void mstHeapPrim(Graph &G, VertexId source)
             if (isIncident(e, min))
             {
                 const auto opposite = e.a == min ? e.b : e.a;
-                if (std::find(heap.begin(), heap.end(), opposite) != heap.end())
+                if (contains(heap, opposite))
                 {
                     Lv[opposite].reachCost = std::min(e.weight, Lv[opposite].reachCost);
                     parents[opposite] = min;
