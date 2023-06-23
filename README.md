@@ -1,6 +1,6 @@
-Visualizing graph algorithms with raylib
+Visualizing graph algorithms with raylib.
 
-currently implemented algorithms:
+implemented algorithms:
 * traversal - dfs
 * traversal - bfs
 * mst - heap prim
@@ -8,5 +8,6 @@ currently implemented algorithms:
 * sssp - heap dijkstra
 * sssp - bellman-ford
 * apsp - dp floyd-warshall
+* approx - approximated min vertex cover
 
 ![demo](./demo.gif)
